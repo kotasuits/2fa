@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My 2FA Authenticator</title>
+    <script src="https://unpkg.com/@otplib/preset-browser@latest/buffer.js"></script>
+    <script src="https://unpkg.com/@otplib/preset-browser@latest/index.js"></script>
+    <style>
+        body { font-family: sans-serif; display: flex; justify-content: center; padding: 20px; background: #f4f4f9; }
+        .card { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
+        h2 { margin-top: 0; color: #333; }
+        input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+        .otp-display { font-size: 3rem; font-weight: bold; color: #2563eb; text-align: center; margin: 20px 0; letter-spacing: 5px; }
+        .progress-container { background: #eee; height: 8px; border-radius: 4px; overflow: hidden; }
+        #progress-bar { background: #2563eb; height: 100%; width: 100%; transition: width 1s linear; }
+        .status { font-size: 0.8rem; color: #666; margin-top: 10px; text-align: center; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>2FA Generator</h2>
+    <label for="secret">Enter Secret Key (Base32):</label>
+    <input type="text" id="secret" placeholder="JBSWY3DPEHPK3PXP" oninput="updateOTP()">
+    
+    <div class="otp-display" id="otp-code">000 000</div>
+    
+    <div class="progress-container">
+        <div id="progress-bar"></div>
+    </div>
+    <p class="status" id="timer-text">Enter a secret to begin</p>
+</div>
+
+<script>
+    const { authenticator } = otplib;
+
+    function updateOTP() {
+        const secret = document.getElementById('secret').value.replace(/\s+/g, '').toUpperCase();
+        const display = document.getElementById('otp-code');
+        const timerText = document.getElementById('timer-text');
+
+        if (!secret) {
+            display.innerText = "000 000";
+            return;
+        }
+
+        try {
+            const token = authenticator.generate(secret);
+            display.innerText = token.slice(0, 3) + " " + token.slice(3);
+        } catch (err) {
+            display.innerText = "INVALID";
+        }
+    }
+
+    // Update the progress bar and refresh OTP every second
+    setInterval(() => {
+        const secret = document.getElementById('secret').value;
+        if (secret) {
+            const timeLeft = authenticator.timeRemaining();
+            const progressBar = document.getElementById('progress-bar');
+            const timerText = document.getElementById('timer-text');
+            
+            // 30 second window logic
+            const percentage = (timeLeft / 30) * 100;
+            progressBar.style.width = percentage + "%";
+            timerText.innerText = `Updating in ${timeLeft}s`;
+
+            if (timeLeft === 30 || timeLeft === 0) {
+                updateOTP();
+            }
+        }
+    }, 1000);
+</script>
+
+</body>
+</html>
